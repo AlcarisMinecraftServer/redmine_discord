@@ -44,7 +44,6 @@ module RedmineDiscord
       def get_embed_fields
         [
             @wrapped_page.to_author_field,
-            EmbedObjects::FieldHelper::get_separator_field,
             @wrapped_page.to_text_field
         ]
       end

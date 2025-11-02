@@ -16,7 +16,6 @@ module RedmineDiscord
         description_field = @wrapped_issue.to_description_field
 
         if description_field != nil
-          fields.push EmbedObjects::FieldHelper::get_separator_field unless fields.empty?
           fields.push description_field
         end
 
@@ -46,8 +45,6 @@ module RedmineDiscord
       def to_embed_array
         fields = @wrapped_issue.to_diff_fields
         notes_field = @wrapped_journal.to_notes_field
-
-        fields.push EmbedObjects::FieldHelper::get_separator_field unless fields.empty?
 
         fields.push @wrapped_journal.to_editor_field
         fields.push notes_field if notes_field

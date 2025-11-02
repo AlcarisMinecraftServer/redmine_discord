@@ -11,10 +11,12 @@ module RedmineDiscord
     end
 
     def to_description_field
-      if @issue.description.present?
-        description = "```#{@issue.description.gsub(/`/, "\u200b`")}```"
-        EmbedObjects::EmbedField.new('Description', description, false).to_hash
-      end
+      return unless @issue.description.present?
+
+      title = I18n.t(:field_description)
+      description = "```#{@issue.description.gsub(/`/, "\u200b`")}```"
+
+      EmbedObjects::EmbedField.new(title, description, false).to_hash
     end
 
     def resolve_absolute_url
@@ -22,21 +24,38 @@ module RedmineDiscord
     end
 
     def to_creation_information_fields
-      display_attributes = ['author_id', 'assigned_to_id', 'priority_id', 'due_date',
-                            'status_id', 'done_ratio', 'estimated_hours',
-                            'category_id', 'fixed_version_id', 'parent_id']
+      display_attributes = ['author_id', 'assigned_to_id', 'priority_id', 'status_id', 'category_id', 'parent_id']
 
-      display_attributes.map {|attribute_name|
-        value = value_for attribute_name rescue nil
+      display_attributes.map do |attribute_name|
+        value = value_for(attribute_name) rescue nil
+        next if value.blank?
+
+        label = translated_label_for(attribute_name)
 
         if attribute_name == 'parent_id'
-          value = value.blank? ? nil : "[##{value.id}](#{url_of value.id})"
+          value = "[##{value.id}](#{url_of value.id})"
         else
-          value = value.blank? ? nil : "`#{value}`"
+          value = "`#{value}`"
         end
 
-        EmbedObjects::EmbedField.new(attribute_name, value, true).to_hash if value
-      }
+        EmbedObjects::EmbedField.new(label, value, true).to_hash
+      end.compact
+    end
+
+    private
+
+    def translated_label_for(attribute_name)
+      key = attribute_name.chomp('_id')
+      case key
+      when 'author'         then I18n.t(:field_author)
+      when 'assigned_to'    then I18n.t(:field_assigned_to)
+      when 'priority'       then I18n.t(:field_priority)
+      when 'status'         then I18n.t(:field_status)
+      when 'category'       then I18n.t(:field_category)
+      when 'parent'         then I18n.t(:field_parent_issue)
+      else
+        key.humanize
+      end
     end
 
     def to_diff_fields
@@ -59,10 +78,12 @@ module RedmineDiscord
           new_value, old_value = [new_value, old_value].map do |issue|
             issue.blank? ? '`N/A`' : "[##{issue.id}](#{url_of issue.id})"
           end
-          EmbedObjects::EmbedField.new(attribute_root_name, "#{old_value} => #{new_value}", true).to_hash
+          label = translated_label_for(attribute_root_name)
+          EmbedObjects::EmbedField.new(label, "#{old_value} => #{new_value}", true).to_hash
         else
           embed_value = "`#{old_value || 'N/A'}` => `#{new_value || 'N/A'}`"
-          EmbedObjects::EmbedField.new(attribute_root_name, embed_value, true).to_hash
+          label = translated_label_for(attribute_root_name)
+          EmbedObjects::EmbedField.new(label, embed_value, true).to_hash
       end unless new_value == old_value
     end
 
@@ -100,8 +121,6 @@ module RedmineDiscord
           IssueCategory.find(old_id)
         when 'priority'
           IssuePriority.find(old_id)
-        when 'fixed_version'
-          Version.find(old_id)
         when 'parent'
           Issue.find(old_id)
         when 'author'
