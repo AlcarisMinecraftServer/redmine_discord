@@ -1,4 +1,3 @@
-require_relative 'field_helper'
 require_relative '../wraps/wrapped_wiki_page'
 
 module RedmineDiscord
